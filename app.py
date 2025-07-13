@@ -1,14 +1,14 @@
 import streamlit as st
 import joblib
 import numpy as np
-import shap
+import shap 
 import matplotlib.pyplot as plt
 
 # Load model
 model = joblib.load("breast_cancer_risk_model.pkl")
 
 # App Title
-st.title("🧬 Early Breast Cancer Risk Prediction")
+st.title("Early Breast Cancer Risk Prediction App")
 st.markdown("This app uses 40 features to estimate the likelihood of early breast cancer based on patient data.")
 
 # Styling
@@ -120,6 +120,8 @@ if st.button("🔬 Explain Prediction", key="shap_button"):
         'physical_activity_level_Moderate', 'physical_activity_level_Sedentary'
     ]
 
+
+
     # Plot waterfall chart
     fig = shap.plots._waterfall.waterfall_legacy(
         expected_val,
@@ -129,3 +131,7 @@ if st.button("🔬 Explain Prediction", key="shap_button"):
     )
 
     st.pyplot(fig)
+
+    st.write("✅ Rebuild forced at 5:30 PM")
+    st.write("🔥 Streamlit rebuild forced manually at 5:45 PM")
+

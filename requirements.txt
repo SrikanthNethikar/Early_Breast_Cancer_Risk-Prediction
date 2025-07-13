@@ -1,7 +1,5 @@
+scikit-learn==1.7.0
 streamlit
-scikit-learn
-numpy
-pandas
 shap
-matplotlib
+pandas
 joblib
