@@ -1,7 +1,8 @@
 streamlit==1.26.0
 pandas
 numpy
-scikit-learn==1.4.2
+scikit-learn==1.7.0
 matplotlib
-shap
+cython
+shap==0.41.0
 joblib
