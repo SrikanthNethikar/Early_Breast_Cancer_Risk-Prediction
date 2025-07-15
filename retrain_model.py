@@ -28,6 +28,7 @@ model.fit(X_train, y_train)
 
 # Save model
 joblib.dump(model, "breast_cancer_risk_model.pkl")
+joblib.dump(X_train.columns.tolist(), "feature_columns.pkl") 
 
 # Save test sets (for SHAP if needed)
 X_test.to_csv("x_test.csv", index=False)

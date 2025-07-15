@@ -1,27 +1,27 @@
 import streamlit as st
 import joblib
 import numpy as np
-import shap 
+import pandas as pd
+import shap
 import matplotlib.pyplot as plt
 
-# Load model
+# Load model and feature column order
 model = joblib.load("breast_cancer_risk_model.pkl")
+feature_columns = joblib.load("feature_columns.pkl")  # Must be present in the directory
 
 # App Title
 st.title("Early Breast Cancer Risk Prediction App")
 st.markdown("This app uses 40 features to estimate the likelihood of early breast cancer based on patient data.")
-
-# Styling
 st.markdown("---")
 
 # Section 1: Mean Measurements
 st.subheader("📊 Mean Cell Measurements")
-mean_radius = st.number_input("Mean Radius (mm)", value=14.0, help="Average radius of cell nuclei")
-mean_texture = st.number_input("Mean Texture", value=20.0, help="Standard deviation of gray-scale values")
+mean_radius = st.number_input("Mean Radius (mm)", value=14.0)
+mean_texture = st.number_input("Mean Texture", value=20.0)
 mean_perimeter = st.number_input("Mean Perimeter (mm)", value=90.0)
 mean_area = st.number_input("Mean Area (mm²)", value=600.0)
-mean_smoothness = st.number_input("Mean Smoothness", value=0.1, help="Local variation in radius lengths")
-mean_compactness = st.number_input("Mean Compactness", value=0.1, help="Perimeter² / Area - 1.0")
+mean_smoothness = st.number_input("Mean Smoothness", value=0.1)
+mean_compactness = st.number_input("Mean Compactness", value=0.1)
 mean_concavity = st.number_input("Mean Concavity", value=0.1)
 mean_concave_points = st.number_input("Mean Concave Points", value=0.1)
 mean_symmetry = st.number_input("Mean Symmetry", value=0.2)
@@ -66,72 +66,78 @@ alcohol_moderate = st.checkbox("Alcohol Intake: Moderate")
 physical_activity_moderate = st.checkbox("Physical Activity: Moderate")
 physical_activity_sedentary = st.checkbox("Physical Activity: Sedentary")
 
-# Feature vector
-input_data = np.array([[
-    mean_radius, mean_texture, mean_perimeter, mean_area, mean_smoothness,
-    mean_compactness, mean_concavity, mean_concave_points, mean_symmetry, mean_fractal_dimension,
-    radius_error, texture_error, perimeter_error, area_error, smoothness_error,
-    compactness_error, concavity_error, concave_points_error, symmetry_error, fractal_dimension_error,
-    worst_radius, worst_texture, worst_perimeter, worst_area, worst_smoothness,
-    worst_compactness, worst_concavity, worst_concave_points, worst_symmetry, worst_fractal_dimension,
-    diagnosis_label,
-    int(family_history), menopause_status,
-    int(nipple_discharge), int(palpable_lump), int(localized_pain),
-    int(alcohol_light), int(alcohol_moderate),
-    int(physical_activity_moderate), int(physical_activity_sedentary)
-]])
+# Collect input values
+input_dict = {
+    "mean radius": mean_radius,
+    "mean texture": mean_texture,
+    "mean perimeter": mean_perimeter,
+    "mean area": mean_area,
+    "mean smoothness": mean_smoothness,
+    "mean compactness": mean_compactness,
+    "mean concavity": mean_concavity,
+    "mean concave points": mean_concave_points,
+    "mean symmetry": mean_symmetry,
+    "mean fractal dimension": mean_fractal_dimension,
+    "radius error": radius_error,
+    "texture error": texture_error,
+    "perimeter error": perimeter_error,
+    "area error": area_error,
+    "smoothness error": smoothness_error,
+    "compactness error": compactness_error,
+    "concavity error": concavity_error,
+    "concave points error": concave_points_error,
+    "symmetry error": symmetry_error,
+    "fractal dimension error": fractal_dimension_error,
+    "worst radius": worst_radius,
+    "worst texture": worst_texture,
+    "worst perimeter": worst_perimeter,
+    "worst area": worst_area,
+    "worst smoothness": worst_smoothness,
+    "worst compactness": worst_compactness,
+    "worst concavity": worst_concavity,
+    "worst concave points": worst_concave_points,
+    "worst symmetry": worst_symmetry,
+    "worst fractal dimension": worst_fractal_dimension,
+    "diagnosis_label": diagnosis_label,
+    "family_history_breast_cancer": int(family_history),
+    "menopause_status": menopause_status,
+    "nipple_discharge": int(nipple_discharge),
+    "palpable_lump": int(palpable_lump),
+    "localized_breast_pain": int(localized_pain),
+    "alcohol_intake_per_week_Light": int(alcohol_light),
+    "alcohol_intake_per_week_Moderate": int(alcohol_moderate),
+    "physical_activity_level_Moderate": int(physical_activity_moderate),
+    "physical_activity_level_Sedentary": int(physical_activity_sedentary)
+}
 
-import shap
-import matplotlib.pyplot as plt
+# DataFrame input
+input_df = pd.DataFrame([input_dict])
+input_encoded = pd.get_dummies(input_df)
+input_encoded = input_encoded.reindex(columns=feature_columns, fill_value=0)
 
 # --- Prediction ---
 if st.button("🔍 Predict Risk", key="predict_button"):
-    prediction = model.predict(input_data)[0]
+    prediction = model.predict(input_encoded)[0]
     if prediction == 1:
         st.error("🩺 **High Risk of Early Breast Cancer**")
     else:
         st.success("✅ **Low Risk of Early Breast Cancer**")
 
 # --- SHAP Explanation ---
-import shap
-import matplotlib.pyplot as plt
-
 if st.button("🔬 Explain Prediction", key="shap_button"):
     st.subheader("🔍 Detailed SHAP Explanation (Top 10 Features)")
 
     explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(input_data)
+    shap_values = explainer.shap_values(input_encoded)
+    shap_val = shap_values[0]  # SHAP values for this instance
+    expected_val = explainer.expected_value
 
-    # Get SHAP values for class 1
-    shap_val = shap_values[0, :, 1]  # shape: (40,)
-    expected_val = explainer.expected_value[1]
-
-    # Real 40 feature names in order
-    feature_names = [
-        'mean radius', 'mean texture', 'mean perimeter', 'mean area', 'mean smoothness',
-        'mean compactness', 'mean concavity', 'mean concave points', 'mean symmetry', 'mean fractal dimension',
-        'radius error', 'texture error', 'perimeter error', 'area error', 'smoothness error',
-        'compactness error', 'concavity error', 'concave points error', 'symmetry error', 'fractal dimension error',
-        'worst radius', 'worst texture', 'worst perimeter', 'worst area', 'worst smoothness',
-        'worst compactness', 'worst concavity', 'worst concave points', 'worst symmetry', 'worst fractal dimension',
-        'diagnosis_label', 'family_history_breast_cancer', 'menopause_status',
-        'nipple_discharge', 'palpable_lump', 'localized_breast_pain',
-        'alcohol_intake_per_week_Light', 'alcohol_intake_per_week_Moderate',
-        'physical_activity_level_Moderate', 'physical_activity_level_Sedentary'
-    ]
-
-
-
-    # Plot waterfall chart
     fig = shap.plots._waterfall.waterfall_legacy(
         expected_val,
         shap_val,
-        feature_names=feature_names,
+        feature_names=input_encoded.columns.tolist(),
         max_display=10
     )
 
     st.pyplot(fig)
-
-    st.write("✅ Rebuild forced at 5:30 PM")
-    st.write("🔥 Streamlit rebuild forced manually at 5:45 PM")
-
+    st.info("✅ SHAP Explanation generated successfully")
