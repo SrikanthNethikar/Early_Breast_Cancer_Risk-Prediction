@@ -16,6 +16,9 @@ y = df[target_column]
 # 🔁 Convert categorical columns to numeric using one-hot encoding
 X_encoded = pd.get_dummies(X)
 
+feature_columns = X_encoded.columns.tolist()
+joblib.dump(feature_columns, "feature_columns.pkl")
+
 # Split the data
 X_train, X_test, y_train, y_test = train_test_split(X_encoded, y, test_size=0.2, random_state=42)
 
