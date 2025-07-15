@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 
 # Load model and feature column order
 model = joblib.load("breast_cancer_risk_model.pkl")
-feature_columns = joblib.load("feature_columns.pkl")  # Must be present in the directory
+feature_columns = joblib.load("feature_columns.pkl")
+st.write("📦 Feature columns used during training:", feature_columns)
 
 # App Title
 st.title("Early Breast Cancer Risk Prediction App")
@@ -114,6 +115,10 @@ input_dict = {
 input_df = pd.DataFrame([input_dict])
 input_encoded = pd.get_dummies(input_df)
 input_encoded = input_encoded.reindex(columns=feature_columns, fill_value=0)
+
+st.write("🧪 Model input preview", input_encoded)
+st.write("🔢 Shape of input:", input_encoded.shape)
+
 
 # --- Prediction ---
 if st.button("🔍 Predict Risk", key="predict_button"):
