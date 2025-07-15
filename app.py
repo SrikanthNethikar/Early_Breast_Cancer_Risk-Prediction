@@ -5,14 +5,14 @@ import pandas as pd
 import shap
 import matplotlib.pyplot as plt
 
-# Load model and feature column order
+# Load model and feature columns
 model = joblib.load("breast_cancer_risk_model.pkl")
 feature_columns = joblib.load("feature_columns.pkl")
-st.write("📦 Feature columns used during training:", feature_columns)
 
 # App Title
 st.title("Early Breast Cancer Risk Prediction App")
-st.markdown("This app uses 40 features to estimate the likelihood of early breast cancer based on patient data.")
+st.markdown("This app uses clinical, radiological, and lifestyle data to estimate early breast cancer risk.")
+
 st.markdown("---")
 
 # Section 1: Mean Measurements
@@ -41,7 +41,7 @@ concave_points_error = st.number_input("Concave Points Error", value=0.02)
 symmetry_error = st.number_input("Symmetry Error", value=0.02)
 fractal_dimension_error = st.number_input("Fractal Dimension Error", value=0.003)
 
-# Section 3: Worst Case Measurements
+# Section 3: Worst Measurements
 st.subheader("🧪 Worst Cell Measurements")
 worst_radius = st.number_input("Worst Radius (mm)", value=17.0)
 worst_texture = st.number_input("Worst Texture", value=25.0)
@@ -54,20 +54,20 @@ worst_concave_points = st.number_input("Worst Concave Points", value=0.2)
 worst_symmetry = st.number_input("Worst Symmetry", value=0.3)
 worst_fractal_dimension = st.number_input("Worst Fractal Dimension", value=0.09)
 
-# Section 4: Patient History & Lifestyle
+# Section 4: History & Lifestyle
 st.subheader("🧝 Patient History & Lifestyle")
-diagnosis_label = st.selectbox("Initial Diagnosis", options=[0, 1], format_func=lambda x: "Benign (0)" if x == 0 else "Malignant (1)")
-family_history = st.checkbox("Family History of Breast Cancer")
-menopause_status = st.selectbox("Menopause Status", options=[0, 1], format_func=lambda x: "Premenopause (0)" if x == 0 else "Postmenopause (1)")
-nipple_discharge = st.checkbox("Nipple Discharge")
-palpable_lump = st.checkbox("Palpable Lump")
-localized_pain = st.checkbox("Localized Breast Pain")
-alcohol_light = st.checkbox("Alcohol Intake: Light")
-alcohol_moderate = st.checkbox("Alcohol Intake: Moderate")
-physical_activity_moderate = st.checkbox("Physical Activity: Moderate")
-physical_activity_sedentary = st.checkbox("Physical Activity: Sedentary")
+likely_malignant = st.selectbox("Initial Diagnosis", options=[0, 1], format_func=lambda x: "Benign (0)" if x == 0 else "Malignant (1)")
 
-# Collect input values
+# Binary inputs
+family_history = st.selectbox("Family History", options=["No", "Yes"])
+menopause_status = st.selectbox("Menopause Status", options=["Pre", "Post"])
+alcohol = st.selectbox("Alcohol Intake Per Week", options=["Light", "Moderate", "Heavy"])
+physical_activity = st.selectbox("Physical Activity", options=["Active", "Moderate", "Sedentary"])
+nipple_discharge = st.selectbox("Nipple Discharge", options=["No", "Yes"])
+palpable_lump = st.selectbox("Palpable Lump", options=["No", "Yes"])
+localized_pain = st.selectbox("Localized Breast Pain", options=["No", "Yes"])
+
+# --- Input Dictionary ---
 input_dict = {
     "mean radius": mean_radius,
     "mean texture": mean_texture,
@@ -99,29 +99,24 @@ input_dict = {
     "worst concave points": worst_concave_points,
     "worst symmetry": worst_symmetry,
     "worst fractal dimension": worst_fractal_dimension,
-    "diagnosis_label": diagnosis_label,
-    "family_history_breast_cancer": int(family_history),
-    "menopause_status": menopause_status,
-    "nipple_discharge": int(nipple_discharge),
-    "palpable_lump": int(palpable_lump),
-    "localized_breast_pain": int(localized_pain),
-    "alcohol_intake_per_week_Light": int(alcohol_light),
-    "alcohol_intake_per_week_Moderate": int(alcohol_moderate),
-    "physical_activity_level_Moderate": int(physical_activity_moderate),
-    "physical_activity_level_Sedentary": int(physical_activity_sedentary)
+    "likely_malignant": likely_malignant,
+    f"family_history_breast_cancer_{family_history}": 1,
+    f"menopause_status_{menopause_status}": 1,
+    f"alcohol_intake_per_week_{alcohol}": 1,
+    f"physical_activity_level_{physical_activity}": 1,
+    f"nipple_discharge_{nipple_discharge}": 1,
+    f"palpable_lump_{palpable_lump}": 1,
+    f"localized_breast_pain_{localized_pain}": 1,
 }
 
-# DataFrame input
+# Convert dict to DataFrame
 input_df = pd.DataFrame([input_dict])
-input_encoded = pd.get_dummies(input_df)
-input_encoded = input_encoded.reindex(columns=feature_columns, fill_value=0)
 
-st.write("🧪 Model input preview", input_encoded)
-st.write("🔢 Shape of input:", input_encoded.shape)
-
+# Ensure all features match the trained model (fill 0 if missing)
+input_encoded = input_df.reindex(columns=feature_columns, fill_value=0)
 
 # --- Prediction ---
-if st.button("🔍 Predict Risk", key="predict_button"):
+if st.button("🔍 Predict Risk"):
     prediction = model.predict(input_encoded)[0]
     if prediction == 1:
         st.error("🩺 **High Risk of Early Breast Cancer**")
@@ -129,20 +124,17 @@ if st.button("🔍 Predict Risk", key="predict_button"):
         st.success("✅ **Low Risk of Early Breast Cancer**")
 
 # --- SHAP Explanation ---
-if st.button("🔬 Explain Prediction", key="shap_button"):
-    st.subheader("🔍 Detailed SHAP Explanation (Top 10 Features)")
-
+if st.button("🔬 Explain Prediction"):
+    st.subheader("🔍 SHAP Explanation (Top 10 Features)")
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(input_encoded)
-    shap_val = shap_values[0]  # SHAP values for this instance
     expected_val = explainer.expected_value
+    shap_val = shap_values[0]  # single instance
 
     fig = shap.plots._waterfall.waterfall_legacy(
         expected_val,
         shap_val,
-        feature_names=input_encoded.columns.tolist(),
+        feature_names=feature_columns,
         max_display=10
     )
-
     st.pyplot(fig)
-    st.info("✅ SHAP Explanation generated successfully")
